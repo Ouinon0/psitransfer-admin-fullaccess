@@ -53,10 +53,14 @@
                 td
                   template(v-if="typeof file.expireDate === 'number'") {{ file.expireDate | date }}
                   template(v-else) {{ file.expireDate }}
+                  span.label.label-default.expired-badge(v-if="file.metadata.expired") expired
                 td.text-right {{ humanFileSize(file.size) }}
                 td.text-right
-                  a.btn.btn-xs.btn-default(v-if="file.url", :href="file.url", target="_blank", title="Download (works even if bucket is password protected)")
+                  a.btn.btn-xs.btn-default(v-if="file.url", :href="file.url", target="_blank", title="Download (works even if bucket is password protected or expired)")
                     icon.fa-fw(name="download")
+                  |  
+                  a.btn.btn-xs.btn-danger(@click="deleteFile(file)", title="Permanently delete this file")
+                    icon.fa-fw(name="trash")
         tfoot
           tr
             td(colspan="3")
@@ -72,6 +76,7 @@
   import 'vue-awesome/icons/sign-in-alt';
   import 'vue-awesome/icons/key';
   import 'vue-awesome/icons/download';
+  import 'vue-awesome/icons/trash';
 
 
   export default {
@@ -166,6 +171,32 @@
         return Math.max(fileSizeInBytes, 0.00).toFixed(2) + byteUnits[i];
       },
 
+      deleteFile(file) {
+        const name = file.metadata.name || file.key;
+        if (!window.confirm(`Delete "${name}" permanently? This cannot be undone.`)) return;
+
+        const sid = file.metadata.sid;
+        const key = file.key;
+        const xhr = new XMLHttpRequest();
+        xhr.open('DELETE', `admin/files/${sid}/${key}`);
+        xhr.setRequestHeader('x-passwd', this.password);
+        xhr.onload = () => {
+          if (xhr.status === 204) {
+            const bucket = this.db[sid];
+            const idx = bucket.findIndex(f => f.key === key);
+            if (idx !== -1) bucket.splice(idx, 1);
+            if (bucket.length === 0) this.$delete(this.db, sid);
+            this.expandDb();
+          } else {
+            this.error = `${xhr.status} ${xhr.statusText}: ${xhr.responseText}`;
+          }
+        };
+        xhr.onerror = () => {
+          this.error = 'Network error while deleting the file.';
+        };
+        xhr.send();
+      },
+
     },
 
 
@@ -184,5 +215,9 @@
   }
   tfoot {
     font-weight: bold;
+  }
+  .expired-badge {
+    margin-left: 6px;
+    vertical-align: middle;
   }
 </style>
