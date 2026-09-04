@@ -156,7 +156,8 @@ export default {
               password: state.password,
               name: file.name,
               comment: file.comment,
-              type: file._File.type
+              type: file._File.type,
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             },
             headers: {
               "x-passwd": rootState.config.uploadPass
