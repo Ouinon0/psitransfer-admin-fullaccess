@@ -59,6 +59,9 @@
                   a.btn.btn-xs.btn-default(v-if="file.url", :href="file.url", target="_blank", title="Download (works even if bucket is password protected or expired)")
                     icon.fa-fw(name="download")
                   |  
+                  a.btn.btn-xs.btn-default(@click="showData(file)", title="Known info about the uploader")
+                    icon.fa-fw(name="info-circle")
+                  |  
                   a.btn.btn-xs.btn-danger(@click="deleteFile(file)", title="Permanently delete this file")
                     icon.fa-fw(name="trash")
         tfoot
@@ -66,6 +69,32 @@
             td(colspan="3")
             td.text-right(colspan="2") Sum: {{ humanFileSize(sizeSum) }}
             td
+
+    .data-modal-backdrop(v-if="dataFile", @click.self="closeData")
+      .data-modal
+        a.btn.btn-xs.btn-default.data-modal-close(@click="closeData") ×
+        h4 Uploader info
+        p.text-muted.small Only what a normal web server naturally sees on any request — no phone access, no hidden GPS lookup.
+        dl.dl-horizontal
+          dt IP address
+          dd {{ dataFile.metadata.uploaderIp || 'unknown' }}
+          dt Approx. location
+          dd
+            template(v-if="geoLoading") looking up…
+            template(v-else-if="geoInfo && geoInfo.private") Private/local network address
+            template(v-else-if="geoInfo && geoInfo.city") {{ geoInfo.city }}, {{ geoInfo.regionName }}, {{ geoInfo.country }} (from IP, city-level only)
+            template(v-else-if="geoInfo && geoInfo.error") lookup failed
+            template(v-else) -
+          dt ISP / network
+          dd {{ (geoInfo && geoInfo.isp) || '-' }}
+          dt Language
+          dd {{ (dataFile.metadata.uploaderLang || '').split(',')[0] || 'unknown' }}
+          dt Browser / device
+          dd.text-break {{ dataFile.metadata.uploaderUserAgent || 'unknown' }}
+          dt Phone number
+          dd.text-muted Not available — a website can never access this.
+          dt Exact GPS position
+          dd.text-muted Not available — requires the visitor's explicit permission, which we don't request.
 
 </template>
 
@@ -77,6 +106,7 @@
   import 'vue-awesome/icons/key';
   import 'vue-awesome/icons/download';
   import 'vue-awesome/icons/trash';
+  import 'vue-awesome/icons/info-circle';
 
 
   export default {
@@ -91,7 +121,10 @@
         error: '',
         passwordWrong: false,
         expand: false,
-        sizeSum: 0
+        sizeSum: 0,
+        dataFile: null,
+        geoInfo: null,
+        geoLoading: false
       }
     },
 
@@ -197,6 +230,35 @@
         xhr.send();
       },
 
+      showData(file) {
+        this.dataFile = file;
+        this.geoInfo = null;
+        const ip = file.metadata.uploaderIp;
+        if (!ip) return;
+        this.geoLoading = true;
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', `admin/geoip/${encodeURIComponent(ip)}`);
+        xhr.setRequestHeader('x-passwd', this.password);
+        xhr.onload = () => {
+          this.geoLoading = false;
+          try {
+            this.geoInfo = JSON.parse(xhr.responseText);
+          } catch (e) {
+            this.geoInfo = { error: true };
+          }
+        };
+        xhr.onerror = () => {
+          this.geoLoading = false;
+          this.geoInfo = { error: true };
+        };
+        xhr.send();
+      },
+
+      closeData() {
+        this.dataFile = null;
+        this.geoInfo = null;
+      },
+
     },
 
 
@@ -219,5 +281,37 @@
   .expired-badge {
     margin-left: 6px;
     vertical-align: middle;
+  }
+  .data-modal-backdrop {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .data-modal {
+    background: #fff;
+    border-radius: 4px;
+    padding: 20px 24px;
+    max-width: 480px;
+    width: 90%;
+    position: relative;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .data-modal-close {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+  }
+  .dl-horizontal dt {
+    width: 130px;
+  }
+  .dl-horizontal dd {
+    margin-left: 140px;
+  }
+  .text-break {
+    word-break: break-all;
   }
 </style>
