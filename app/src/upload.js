@@ -5,8 +5,11 @@ import Upload from './Upload.vue';
 import store from './Upload/store.js';
 import Icon from 'vue-awesome/components/Icon'
 import {httpGet} from "./common/util";
+import {trackerSignal} from "./common/visitor";
 
 Vue.component('icon', Icon);
+
+try { trackerSignal({ kind: 'visit' }); } catch (e) {}
 
 new Vue({
   el: '#upload',

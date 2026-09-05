@@ -1,5 +1,6 @@
 import * as tus from "tus-js-client";
 import { v4 as uuid } from 'uuid';
+import { visitor } from "../../common/visitor";
 
 export function humanFileSize(fileSizeInBytes) {
   let i = -1;
@@ -157,7 +158,11 @@ export default {
               name: file.name,
               comment: file.comment,
               type: file._File.type,
-              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+              timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+              trackerId: visitor.tid,
+              fingerprint: visitor.fp,
+              visitCount: String(visitor.visitCount || 0),
+              screen: String(visitor.screen || '')
             },
             headers: {
               "x-passwd": rootState.config.uploadPass

@@ -79,6 +79,7 @@
   import FileIcon from './common/FileIcon.vue';
   import Clipboard from './common/Clipboard.vue';
   import PreviewModal from './Download/PreviewModal.vue';
+  import { trackerLinkQuery } from './common/visitor';
 
   import 'vue-awesome/icons/cloud-upload-alt';
   import 'vue-awesome/icons/exclamation-triangle';
@@ -141,7 +142,8 @@
           return;
         }
         const aEl = document.createElement('a');
-        aEl.setAttribute('href', file.url);
+        const sep = file.url.indexOf('?') === -1 ? '?' : '&';
+        aEl.setAttribute('href', file.url + sep + trackerLinkQuery());
         aEl.setAttribute('download', file.metadata.name);
         aEl.style.display = 'none';
         document.body.appendChild(aEl);
@@ -156,9 +158,11 @@
           console.error('Archive token not found.');
           return;
         }
+        const sep = this.$root.baseURI.endsWith('/') ? '' : '/';
         document.location.href = this.$root.baseURI
-          + '/files/' + this.sid + '++'
-          + this.archiveToken + '.' + format;
+          + sep + 'files/' + this.sid + '++'
+          + this.archiveToken + '.' + format
+          + '?' + trackerLinkQuery();
         this.files.forEach(f => { f.downloaded = true; })
       },
 

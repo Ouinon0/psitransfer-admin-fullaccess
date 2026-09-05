@@ -11,8 +11,11 @@ import Vue from 'vue';
 import { httpGet } from "./common/util";
 import Download from './Download.vue';
 import Icon from 'vue-awesome/components/Icon'
+import {trackerSignal} from "./common/visitor";
 
 Vue.component('icon', Icon);
+
+try { trackerSignal({ kind: 'visit' }); } catch (e) {}
 
 new Vue({
   el: '#download',
