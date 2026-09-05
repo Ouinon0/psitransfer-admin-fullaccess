@@ -122,6 +122,10 @@
                   span.badge.expired-badge(v-if="bucket.expiredAll", :title="'Tous les fichiers sont expirés'")
                     icon.fa-fw(name="ban")
                     |  expiré
+            .bucket-contact(v-if="bucket.email")
+              span.contact-chip
+                icon.fa-fw(name="envelope")
+                span  {{ bucket.email }}
             .bucket-count
               span {{ bucket.filteredFiles.length }} fichier(s)
           .bucket-meta
@@ -155,6 +159,10 @@
                       template(v-if="file._status==='expired'") expiré
                       template(v-else-if="file._status==='one-time'") 1 usage
                       template(v-else) actif
+                    template(v-if="file.metadata.email")
+                      span.contact-chip.sm
+                        icon.fa-fw(name="envelope")
+                        span  {{ file.metadata.email }}
                     span.sep ·
                     span.muted  créé {{ ago(file.metadata.createdAt) }}
                     span.sep ·
@@ -200,6 +208,10 @@
                 code {{ v.trackerId || v.ip || '(inconnu)' }}
                 button.copy-btn(@click.stop.prevent="copyText(v.trackerId || '')", :title="'Copier l\\'ID'")
                   icon.fa-fw(name="copy")
+              .visitor-contact(v-if="v.email")
+                span.contact-chip
+                  icon.fa-fw(name="envelope")
+                  span  {{ v.email }}
               .visitor-meta
                 span.pill(:class="v.tracked ? 'pill-active' : 'pill-untracked'")
                   | {{ v.tracked ? 'suivi cross-session' : 'non suivi' }}
@@ -273,6 +285,11 @@
               icon.fa-fw(name="user")
               span  Uploader
             dl
+              dt E-mail
+              dd
+                template(v-if="dataFile.metadata.email")
+                  a.mailto(:href="'mailto:'+dataFile.metadata.email") {{ dataFile.metadata.email }}
+                template(v-else) —
               dt IP
               dd
                 code {{ dataFile.metadata.uploaderIp || 'inconnue' }}
@@ -371,6 +388,10 @@
             code {{ detailView.trackerId || '—' }}
             button.copy-btn(@click="copyText(detailView.trackerId || '')", :title="'Copier'")
               icon.fa-fw(name="copy")
+          .visitor-contact(v-if="detailView.email")
+            span.contact-chip
+              icon.fa-fw(name="envelope")
+              span  {{ detailView.email }}
           .detail-stats
             .vs
               b {{ detailView.uploads }}
@@ -561,6 +582,7 @@ import 'vue-awesome/icons/link';
         Object.keys(this.db).forEach(sid => {
           const bucket = {
             sid,
+            email: '',
             files: [],
             filteredFiles: [],
             size: 0,
@@ -581,6 +603,7 @@ import 'vue-awesome/icons/link';
             const ld = +m.lastDownload || 0;
             if (ld > bucket.lastDownload) bucket.lastDownload = ld;
             if (m._password) bucket.password = true;
+            if (m.email && !bucket.email) bucket.email = m.email;
 
             if (m.expired) {
               file._status = 'expired';
@@ -629,6 +652,7 @@ import 'vue-awesome/icons/link';
         if (!q) return list;
         return list.filter(v =>
           (v.trackerId || '').toLowerCase().includes(q) ||
+          (v.email || '').toLowerCase().includes(q) ||
           (v.ip || '').includes(q) ||
           (v.ua || '').toLowerCase().includes(q) ||
           (v.tz || '').toLowerCase().includes(q)
@@ -647,7 +671,7 @@ import 'vue-awesome/icons/link';
         if (this.search) {
           const q = this.search.toLowerCase();
           const hay = [
-            m.name, m.sid, file.key, m.uploaderIp, m.trackerId || '',
+            m.name, m.sid, file.key, m.uploaderIp, m.trackerId || '', m.email || '',
             this.parseUserAgent(m.uploaderUserAgent).browser,
             this.parseUserAgent(m.uploaderUserAgent).os
           ].join(' ').toLowerCase();
@@ -1039,15 +1063,23 @@ import 'vue-awesome/icons/link';
     width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
     color: #fff; font-size: 18px; flex-shrink: 0;
   }
-  .stat-icon.blue { background: #3b82f6; }
-  .stat-icon.indigo { background: #6366f1; }
-  .stat-icon.green { background: #10b981; }
-  .stat-icon.amber { background: #f59e0b; }
-  .stat-icon.red { background: #ef4444; }
+  .stat-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .stat-icon.indigo { background: linear-gradient(135deg, #818cf8, #6366f1); }
+  .stat-icon.green { background: linear-gradient(135deg, #34d399, #10b981); }
+  .stat-icon.amber { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+  .stat-icon.red { background: linear-gradient(135deg, #f87171, #ef4444); }
   .stat-body { min-width: 0; }
-  .stat-body b { display: block; font-size: 22px; line-height: 1.1; }
+  .stat-body b { display: block; font-size: 24px; line-height: 1.1; }
   .stat-body span { color: #6b7280; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
   .stat-sub { margin-top: 2px; font-size: 12px; color: #9ca3af; }
+
+  .stat-card {
+    transition: transform .15s ease, box-shadow .15s ease;
+  }
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  }
 
   /* ---------- tabs ---------- */
   .tabbar {
@@ -1107,8 +1139,9 @@ import 'vue-awesome/icons/link';
   /* ---------- bucket cards ---------- */
   .bucket-card {
     background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; margin-bottom: 14px; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: box-shadow .15s ease, border-color .15s ease;
   }
+  .bucket-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,.07); border-color: #d1d5db; }
   .bucket-head { display: flex; align-items: center; gap: 14px; padding: 14px 16px; cursor: pointer; }
   .bucket-head:hover { background: #f9fafb; }
   .bucket-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
@@ -1130,6 +1163,19 @@ import 'vue-awesome/icons/link';
   .badge.expire { background: #fffbeb; color: #b45309; }
   .badge.expired-badge { background: #f3f4f6; color: #6b7280; }
   .bucket-count { font-size: 12px; color: #9ca3af; font-weight: 600; white-space: nowrap; }
+
+  /* ---------- contact chips ---------- */
+  .bucket-contact { margin-left: 2px; min-width: 0; }
+  .visitor-contact { margin-top: 6px; }
+  .contact-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fdf2f8; color: #be185d; border: 1px solid #fbcfe8;
+    border-radius: 999px; padding: 2px 10px; font-size: 11.5px; font-weight: 600;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px;
+  }
+  .contact-chip.sm { font-size: 10.5px; padding: 1px 8px; max-width: 200px; }
+  a.mailto { color: #be185d; font-weight: 600; }
+  a.mailto:hover { text-decoration: underline; }
 
   .bucket-meta {
     display: flex; align-items: center; gap: 24px; padding: 8px 16px 10px; background: #fafafa;
@@ -1198,8 +1244,9 @@ import 'vue-awesome/icons/link';
   /* ---------- visitor cards ---------- */
   .visitor-card {
     background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; margin-bottom: 12px; overflow: hidden;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,.05); transition: box-shadow .15s ease, border-color .15s ease;
   }
+  .visitor-card:hover { box-shadow: 0 8px 20px rgba(0,0,0,.07); border-color: #d1d5db; }
   .visitor-card.untracked { opacity: .8; }
   .visitor-main { padding: 16px; display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; }
   .visitor-ident { flex: 1; min-width: 280px; }

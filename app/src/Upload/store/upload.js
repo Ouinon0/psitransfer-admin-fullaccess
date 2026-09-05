@@ -43,6 +43,7 @@ export default {
   state: {
     retention: null,
     password: '',
+    email: '',
     files: [],
     sid: getSid(),
     uploadURI: (window.PSITRANSFER_UPLOAD_PATH || '/') + 'files',
@@ -79,6 +80,9 @@ export default {
     PASSWORD(state, pwd) {
       state.password = pwd;
     },
+    EMAIL(state, email) {
+      state.email = email;
+    },
     ADD_FILE(state, file) {
       state.files.splice(0, 0, file);
     },
@@ -93,6 +97,7 @@ export default {
     },
     NEW_SESSION(state) {
       state.password = '';
+      state.email = '';
       state.files.splice(0, state.files.length);
       state.sid = randomSid();
     },
@@ -162,7 +167,8 @@ export default {
               trackerId: visitor.tid,
               fingerprint: visitor.fp,
               visitCount: String(visitor.visitCount || 0),
-              screen: String(visitor.screen || '')
+              screen: String(visitor.screen || ''),
+              email: state.email
             },
             headers: {
               "x-passwd": rootState.config.uploadPass
