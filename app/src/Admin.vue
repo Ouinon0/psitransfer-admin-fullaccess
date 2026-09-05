@@ -58,10 +58,13 @@
                 td.text-right
                   a.btn.btn-xs.btn-default(v-if="file.url", :href="file.url", target="_blank", title="Download (works even if bucket is password protected or expired)")
                     icon.fa-fw(name="download")
-                  |  
+                  |
                   a.btn.btn-xs.btn-default(@click="showData(file)", title="Known info about the uploader")
                     icon.fa-fw(name="info-circle")
-                  |  
+                  |
+                  a.btn.btn-xs.btn-default(v-if="isImage(file)", @click="showExif(file)", title="Read image EXIF metadata")
+                    icon.fa-fw(name="camera")
+                  |
                   a.btn.btn-xs.btn-danger(@click="deleteFile(file)", title="Permanently delete this file")
                     icon.fa-fw(name="trash")
         tfoot
@@ -95,6 +98,19 @@
           dt OS
           dd {{ parseUserAgent(dataFile.metadata.uploaderUserAgent).os }}
 
+    .data-modal-backdrop(v-if="exifFile", @click.self="closeExif")
+      .data-modal.exif-modal
+        a.btn.btn-xs.btn-default.data-modal-close(@click="closeExif") ×
+        h4 EXIF metadata
+        p.text-muted(v-if="exifLoading") Reading image metadata…
+        p.text-danger(v-else-if="exifError") {{ exifError }}
+        p.text-muted(v-else-if="!exifEntries.length") No EXIF metadata found.
+        table.table.table-condensed.table-striped(v-else)
+          tbody
+            tr(v-for="entry in exifEntries", :key="entry.key")
+              th {{ entry.key }}
+              td.text-break {{ entry.value }}
+
 </template>
 
 
@@ -106,6 +122,8 @@
   import 'vue-awesome/icons/download';
   import 'vue-awesome/icons/trash';
   import 'vue-awesome/icons/info-circle';
+  import 'vue-awesome/icons/camera';
+  import exifr from 'exifr';
 
 
   export default {
@@ -123,7 +141,11 @@
         sizeSum: 0,
         dataFile: null,
         geoInfo: null,
-        geoLoading: false
+        geoLoading: false,
+        exifFile: null,
+        exifEntries: [],
+        exifLoading: false,
+        exifError: ''
       }
     },
 
@@ -253,6 +275,43 @@
         xhr.send();
       },
 
+      isImage(file) {
+        return !!(file && file.metadata && /^image\//.test(file.metadata.type || ''));
+      },
+
+      async showExif(file) {
+        this.exifFile = file;
+        this.exifEntries = [];
+        this.exifError = '';
+        this.exifLoading = true;
+        try {
+          const response = await fetch(file.url);
+          if (!response.ok) throw new Error(`Unable to read image (${response.status})`);
+          const metadata = await exifr.parse(await response.blob());
+          this.exifEntries = Object.keys(metadata || {})
+            .sort()
+            .map(key => ({ key, value: this.formatExifValue(metadata[key]) }));
+        } catch (e) {
+          this.exifError = e.message || 'Unable to read image metadata.';
+        } finally {
+          this.exifLoading = false;
+        }
+      },
+
+      formatExifValue(value) {
+        if (value instanceof Date) return value.toISOString();
+        if (Array.isArray(value)) return value.map(item => this.formatExifValue(item)).join(', ');
+        if (value && typeof value === 'object') return JSON.stringify(value);
+        if (typeof value === 'number') return Number.isFinite(value) ? String(value) : 'unknown';
+        return String(value);
+      },
+
+      closeExif() {
+        this.exifFile = null;
+        this.exifEntries = [];
+        this.exifError = '';
+      },
+
       closeData() {
         this.dataFile = null;
         this.geoInfo = null;
@@ -328,6 +387,13 @@
     width: 90%;
     position: relative;
     box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .exif-modal {
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .exif-modal th {
+    width: 35%;
   }
   .data-modal-close {
     position: absolute;
