@@ -55,6 +55,4 @@ module.exports = {
     "4838400": "8 semaines"
   },
   uploadPassword: "Mot de passe d'accès au téléversement",
-  emailTracking: "E-mail de suivi",
-  emailTrackingHint: "Suivez vos transferts depuis votre messagerie",
 }

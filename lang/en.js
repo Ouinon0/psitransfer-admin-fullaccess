@@ -55,6 +55,4 @@ module.exports = {
     "4838400": "8 Weeks"
   },
   uploadPassword: "Password for uploading",
-  emailTracking: "Tracking E-Mail",
-  emailTrackingHint: "Receive updates about your transfers",
 }

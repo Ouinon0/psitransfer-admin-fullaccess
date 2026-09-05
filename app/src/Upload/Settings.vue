@@ -36,7 +36,7 @@
             )
               icon(name="key")
         div
-          label(for='email') {{ $root.lang.emailTracking }}
+          label(for='email') {{ $root.lang.email }}
           .input-group
             span.input-group-addon
               icon(name="envelope")
@@ -45,9 +45,7 @@
               :value='email'
               @input="$store.commit('upload/EMAIL', $event.target.value)"
               :disabled='disabled'
-              :placeholder="'vous@exemple.fr'"
             )
-          small.help-block {{ $root.lang.emailTrackingHint }}
 </template>
 
 <script type="text/babel">
